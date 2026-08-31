@@ -753,13 +753,54 @@ macro_rules! map_container {
             type Src = $target<$key::Src, $value::Src $(, $state)?>;
 
             #[inline]
+            #[allow(clippy::arithmetic_side_effects)]
             fn size_of(src: &Self::Src) -> $crate::WriteResult<usize> {
-                $crate::schema::size_of_kv_iter::<$key, $value, Len, C>(src.iter())
+                let len = src.len();
+                if let ($crate::TypeMeta::Static { size: key_size, .. },
+                        $crate::TypeMeta::Static { size: value_size, .. }) =
+                    (<$key as $crate::SchemaWrite<C>>::TYPE_META, <$value as $crate::SchemaWrite<C>>::TYPE_META)
+                {
+                    return Ok(Len::write_bytes_needed(len)? + (key_size + value_size) * len);
+                }
+                src.iter().try_fold(Len::write_bytes_needed(len)?, |acc, (k, v)| {
+                    Ok::<_, $crate::WriteError>(acc + $key::size_of(k)? + $value::size_of(v)?)
+                })
             }
 
             #[inline]
-            fn write(writer: impl $crate::io::Writer, src: &Self::Src) -> $crate::WriteResult<()> {
-                $crate::schema::write_kv_iter_prealloc_check::<$key, $value, Len, C>(writer, src.iter())
+            fn write(mut writer: impl $crate::io::Writer, src: &Self::Src) -> $crate::WriteResult<()> {
+                use $crate::io::Writer as _;
+
+                let len = src.len();
+                Len::prealloc_check::<($key::Src, $value::Src)>(len)?;
+
+                macro_rules! write_entries {
+                    ($w:expr) => {{
+                        Len::write($w.by_ref(), len)?;
+                        for (k, v) in src {
+                            $key::write($w.by_ref(), k)?;
+                            $value::write($w.by_ref(), v)?;
+                        }
+                    }};
+                }
+
+                if let ($crate::TypeMeta::Static { size: key_size, .. },
+                        $crate::TypeMeta::Static { size: value_size, .. }) =
+                    (<$key as $crate::SchemaWrite<C>>::TYPE_META, <$value as $crate::SchemaWrite<C>>::TYPE_META)
+                {
+                    #[allow(clippy::arithmetic_side_effects)]
+                    let needed = Len::write_bytes_needed(len)? + (key_size + value_size) * len;
+                    // SAFETY: `needed` covers the encoded length plus exactly `len` key/value
+                    // pairs, and `src` yields exactly `src.len()` of them, so the trusted
+                    // window is fully initialized.
+                    let mut writer = unsafe { writer.as_trusted_for(needed) }?;
+                    write_entries!(writer);
+                    writer.finish()?;
+                    return Ok(());
+                }
+
+                write_entries!(writer);
+                Ok(())
             }
         }
 
