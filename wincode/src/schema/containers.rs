@@ -611,10 +611,6 @@ pub(crate) use seq_capacity;
 ///
 /// `make` receives the decoded length and builds the collection; `insert` places one
 /// entry and may fail the read (see [`DuplicateKeyPolicy::check`]).
-///
-/// Reads the key and value separately rather than as a `(K, V)` tuple: the tuple read
-/// opens a nested trusted window per entry and carries a drop guard, costing ~9% on
-/// `HashMap<[u8; 16], PodStruct>` deserialization.
 #[cfg(feature = "alloc")]
 #[inline]
 pub(crate) fn read_kv_seq<'de, K, V, Len, C, M>(
@@ -634,6 +630,8 @@ where
         ($reader:expr) => {{
             let mut map = make(len);
             for _ in 0..len {
+                // Read K and V separately; wincode cannot optimize for tuple memory
+                // layout, so `(K, V)` decodes slower.
                 let k = K::get($reader.by_ref())?;
                 let v = V::get($reader.by_ref())?;
                 insert(&mut map, k, v)?;
