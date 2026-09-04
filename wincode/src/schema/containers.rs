@@ -53,9 +53,8 @@
 //!
 //! # Keyed collections
 //!
-//! Map and set containers also take a [`DuplicateKeyPolicy`]. By default a repeated
-//! key overwrites the previous entry, like the plain `HashMap`/`BTreeMap` schemas.
-//! Use [`CheckUniqueKeys`] to reject duplicates instead:
+//! Map and set containers also take a [`DuplicateKeyPolicy`]. Default is
+//! [`AllowDuplicateKeys`]; [`CheckUniqueKeys`] rejects a repeat instead:
 //!
 //! ```
 //! # #[cfg(feature = "alloc")] {
@@ -550,8 +549,7 @@ where
 
 /// How a keyed collection schema reacts when the encoded sequence repeats a key.
 ///
-/// Default is [`AllowDuplicateKeys`].
-#[cfg_attr(feature = "std", doc = "See [`HashMap`] for an example.")]
+/// Default is [`AllowDuplicateKeys`]. See `HashMap` for an example.
 pub trait DuplicateKeyPolicy: sealed::Sealed {
     /// Whether a repeated key aborts the read with
     /// [`ReadError::Custom`](crate::error::ReadError::Custom).
@@ -707,17 +705,15 @@ where
 macro_rules! map_container {
     // The default hasher lives in `std`, so a stateful container's parameter defaults
     // are only available there; `no_std` builds name every parameter explicitly.
-    (@struct $(#[cfg($cfg:meta)])? $(#[doc = $doc:expr])* $(#[cfg_attr($ca:meta, doc = $cadoc:expr)])* $name:ident<$($generic:ident),*>) => {
+    (@struct $(#[cfg($cfg:meta)])? $(#[doc = $doc:expr])* $name:ident<$($generic:ident),*>) => {
         $(#[doc = $doc])*
-        $(#[cfg_attr($ca, doc = $cadoc)])*
         $(#[cfg($cfg)])?
         pub struct $name<$($generic,)* Len, Dup = $crate::containers::AllowDuplicateKeys>(
             core::marker::PhantomData<($($generic,)* Len, Dup)>,
         );
     };
-    (@struct $(#[cfg($cfg:meta)])? $(#[doc = $doc:expr])* $(#[cfg_attr($ca:meta, doc = $cadoc:expr)])* $name:ident<$($generic:ident),*>, $state:ident = $state_default:ty) => {
+    (@struct $(#[cfg($cfg:meta)])? $(#[doc = $doc:expr])* $name:ident<$($generic:ident),*>, $state:ident = $state_default:ty) => {
         $(#[doc = $doc])*
-        $(#[cfg_attr($ca, doc = $cadoc)])*
         #[cfg(all($($cfg,)? feature = "std"))]
         pub struct $name<
             $($generic,)*
@@ -726,23 +722,24 @@ macro_rules! map_container {
             $state = $state_default,
         >(core::marker::PhantomData<($($generic,)* Len, Dup, $state)>);
         $(#[doc = $doc])*
-        $(#[cfg_attr($ca, doc = $cadoc)])*
+        // No default hasher without `std`, so `$state` must be named, keep `Dup` last to
+        // match the other containers.
         #[cfg(all($($cfg,)? not(feature = "std")))]
-        pub struct $name<$($generic,)* Len, Dup, $state>(
+        pub struct $name<$($generic,)* Len, $state, Dup = $crate::containers::AllowDuplicateKeys>(
             core::marker::PhantomData<($($generic,)* Len, Dup, $state)>,
         );
     };
     (
         $(#[cfg($cfg:meta)])?
         $(#[doc = $doc:expr])*
-        $(#[cfg_attr($ca:meta, doc = $cadoc:expr)])*
+
         $name:ident => $target:ident<$key:ident : $($constraint:path)|*, $value:ident
             $(, $state:ident : $($state_constraint:path)|* = $state_default:ty)?>,
         $with_capacity:expr
         $(, $cap_unique_keys:ident)?
     ) => {
         $crate::containers::map_container! {
-            @struct $(#[cfg($cfg)])? $(#[doc = $doc])* $(#[cfg_attr($ca, doc = $cadoc)])* $name<$key, $value> $(, $state = $state_default)?
+            @struct $(#[cfg($cfg)])? $(#[doc = $doc])* $name<$key, $value> $(, $state = $state_default)?
         }
 
         $(#[cfg($cfg)])?
@@ -891,14 +888,14 @@ macro_rules! set_container {
     (
         $(#[cfg($cfg:meta)])?
         $(#[doc = $doc:expr])*
-        $(#[cfg_attr($ca:meta, doc = $cadoc:expr)])*
+
         $name:ident => $target:ident<$key:ident : $($constraint:path)|*
             $(, $state:ident : $($state_constraint:path)|* = $state_default:ty)?>,
         $with_capacity:expr
         $(, $cap_unique_keys:ident)?
     ) => {
         $crate::containers::map_container! {
-            @struct $(#[cfg($cfg)])? $(#[doc = $doc])* $(#[cfg_attr($ca, doc = $cadoc)])* $name<$key> $(, $state = $state_default)?
+            @struct $(#[cfg($cfg)])? $(#[doc = $doc])* $name<$key> $(, $state = $state_default)?
         }
 
         $(#[cfg($cfg)])?
@@ -1039,8 +1036,7 @@ map_container! {
 
 map_container! {
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "std", doc = "Like [`HashMap`], for [`BTreeMap`](alloc::collections::BTreeMap).")]
-    #[cfg_attr(not(feature = "std"), doc = "A [`BTreeMap`](alloc::collections::BTreeMap) with a customizable length encoding and [`DuplicateKeyPolicy`].")]
+    /// Like `HashMap`, for [`BTreeMap`](alloc::collections::BTreeMap).
     BTreeMap => AllocBTreeMap<K: Ord, V>,
     |_| AllocBTreeMap::new()
 }
@@ -1056,8 +1052,7 @@ set_container! {
 
 set_container! {
     #[cfg(feature = "alloc")]
-    #[cfg_attr(feature = "std", doc = "Like [`HashSet`], for [`BTreeSet`](alloc::collections::BTreeSet).")]
-    #[cfg_attr(not(feature = "std"), doc = "A [`BTreeSet`](alloc::collections::BTreeSet) with a customizable length encoding and [`DuplicateKeyPolicy`].")]
+    /// Like `HashSet`, for [`BTreeSet`](alloc::collections::BTreeSet).
     BTreeSet => AllocBTreeSet<K: Ord>,
     |_| AllocBTreeSet::new()
 }
