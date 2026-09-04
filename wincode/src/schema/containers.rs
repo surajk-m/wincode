@@ -718,13 +718,13 @@ macro_rules! map_container {
         pub struct $name<
             $($generic,)*
             Len,
-            Dup = $crate::containers::AllowDuplicateKeys,
             $state = $state_default,
-        >(core::marker::PhantomData<($($generic,)* Len, Dup, $state)>);
+            Dup = $crate::containers::AllowDuplicateKeys,
+        >(core::marker::PhantomData<($($generic,)* Len, $state, Dup)>);
         $(#[doc = $doc])*
         #[cfg(all($($cfg,)? not(feature = "std")))]
-        pub struct $name<$($generic,)* Len, Dup, $state>(
-            core::marker::PhantomData<($($generic,)* Len, Dup, $state)>,
+        pub struct $name<$($generic,)* Len, $state, Dup = $crate::containers::AllowDuplicateKeys>(
+            core::marker::PhantomData<($($generic,)* Len, $state, Dup)>,
         );
     };
     (
@@ -742,7 +742,7 @@ macro_rules! map_container {
 
         $(#[cfg($cfg)])?
         unsafe impl<C: $crate::config::ConfigCore, $key, $value, Len, Dup $(, $state)?>
-            $crate::SchemaWrite<C> for $name<$key, $value, Len, Dup $(, $state)?>
+            $crate::SchemaWrite<C> for $name<$key, $value, Len $(, $state)?, Dup>
         where
             Len: $crate::len::SeqLen<C>,
             $key: $crate::SchemaWrite<C, Src: Sized>,
@@ -805,7 +805,7 @@ macro_rules! map_container {
 
         $(#[cfg($cfg)])?
         unsafe impl<'de, C: $crate::config::ConfigCore, $key, $value, Len, Dup $(, $state)?>
-            $crate::SchemaRead<'de, C> for $name<$key, $value, Len, Dup $(, $state)?>
+            $crate::SchemaRead<'de, C> for $name<$key, $value, Len $(, $state)?, Dup>
         where
             Len: $crate::len::SeqLen<C>,
             Dup: $crate::containers::DuplicateKeyPolicy,
@@ -848,12 +848,12 @@ macro_rules! map_container {
 
             #[inline]
             fn size_of(src: &Self::Src) -> $crate::WriteResult<usize> {
-                <$name<$key, $value, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaWrite<C>>::size_of(src)
+                <$name<$key, $value, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaWrite<C>>::size_of(src)
             }
 
             #[inline]
             fn write(writer: impl $crate::io::Writer, src: &Self::Src) -> $crate::WriteResult<()> {
-                <$name<$key, $value, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaWrite<C>>::write(writer, src)
+                <$name<$key, $value, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaWrite<C>>::write(writer, src)
             }
         }
 
@@ -873,7 +873,7 @@ macro_rules! map_container {
                 reader: impl $crate::io::Reader<'de>,
                 dst: &mut core::mem::MaybeUninit<Self::Dst>,
             ) -> $crate::ReadResult<()> {
-                <$name<$key, $value, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaRead<'de, C>>::read(reader, dst)
+                <$name<$key, $value, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaRead<'de, C>>::read(reader, dst)
             }
         }
     };
@@ -898,7 +898,7 @@ macro_rules! set_container {
 
         $(#[cfg($cfg)])?
         unsafe impl<C: $crate::config::ConfigCore, $key, Len, Dup $(, $state)?>
-            $crate::SchemaWrite<C> for $name<$key, Len, Dup $(, $state)?>
+            $crate::SchemaWrite<C> for $name<$key, Len $(, $state)?, Dup>
         where
             Len: $crate::len::SeqLen<C>,
             $key: $crate::SchemaWrite<C, Src: Sized>,
@@ -919,7 +919,7 @@ macro_rules! set_container {
 
         $(#[cfg($cfg)])?
         unsafe impl<'de, C: $crate::config::ConfigCore, $key, Len, Dup $(, $state)?>
-            $crate::SchemaRead<'de, C> for $name<$key, Len, Dup $(, $state)?>
+            $crate::SchemaRead<'de, C> for $name<$key, Len $(, $state)?, Dup>
         where
             Len: $crate::len::SeqLen<C>,
             Dup: $crate::containers::DuplicateKeyPolicy,
@@ -961,12 +961,12 @@ macro_rules! set_container {
 
             #[inline]
             fn size_of(src: &Self::Src) -> $crate::WriteResult<usize> {
-                <$name<$key, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaWrite<C>>::size_of(src)
+                <$name<$key, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaWrite<C>>::size_of(src)
             }
 
             #[inline]
             fn write(writer: impl $crate::io::Writer, src: &Self::Src) -> $crate::WriteResult<()> {
-                <$name<$key, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaWrite<C>>::write(writer, src)
+                <$name<$key, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaWrite<C>>::write(writer, src)
             }
         }
 
@@ -985,7 +985,7 @@ macro_rules! set_container {
                 reader: impl $crate::io::Reader<'de>,
                 dst: &mut core::mem::MaybeUninit<Self::Dst>,
             ) -> $crate::ReadResult<()> {
-                <$name<$key, C::LengthEncoding, $crate::containers::AllowDuplicateKeys $(, $state)?> as $crate::SchemaRead<'de, C>>::read(reader, dst)
+                <$name<$key, C::LengthEncoding $(, $state)?, $crate::containers::AllowDuplicateKeys> as $crate::SchemaRead<'de, C>>::read(reader, dst)
             }
         }
     };
@@ -1006,12 +1006,12 @@ map_container! {
     ///
     /// ```
     /// # #[cfg(all(feature = "std", feature = "derive"))] {
-    /// # use std::collections::HashMap;
+    /// # use std::collections::{HashMap, hash_map::RandomState};
     /// # use wincode::{ReadError, containers, len::BincodeLen};
     /// # use wincode_derive::{SchemaWrite, SchemaRead};
     /// #[derive(SchemaWrite, SchemaRead, PartialEq, Debug)]
     /// struct MyStruct {
-    ///     #[wincode(with = "containers::HashMap<u32, u64, BincodeLen, containers::CheckUniqueKeys>")]
+    ///     #[wincode(with = "containers::HashMap<u32, u64, BincodeLen, RandomState, containers::CheckUniqueKeys>")]
     ///     map: HashMap<u32, u64>,
     /// }
     ///
@@ -1438,7 +1438,7 @@ mod tests {
             len::{BincodeLen, UseIntLen},
             serialize,
         },
-        std::collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+        std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, hash_map::RandomState},
     };
 
     fn dup_key_map_bytes() -> Vec<u8> {
@@ -1470,7 +1470,9 @@ mod tests {
         let bytes = dup_key_map_bytes();
 
         assert!(matches!(
-            <containers::HashMap<u32, u64, BincodeLen, CheckUniqueKeys>>::deserialize(&bytes),
+            <containers::HashMap<u32, u64, BincodeLen, RandomState, CheckUniqueKeys>>::deserialize(
+                &bytes
+            ),
             Err(ReadError::Custom(_)),
         ));
         assert!(matches!(
@@ -1484,7 +1486,9 @@ mod tests {
         let bytes = dup_elem_set_bytes();
 
         assert!(matches!(
-            <containers::HashSet<u32, BincodeLen, CheckUniqueKeys>>::deserialize(&bytes),
+            <containers::HashSet<u32, BincodeLen, RandomState, CheckUniqueKeys>>::deserialize(
+                &bytes
+            ),
             Err(ReadError::Custom(_)),
         ));
         assert!(matches!(
