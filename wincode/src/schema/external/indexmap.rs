@@ -24,8 +24,12 @@ set_container! {
 mod tests {
     use {
         crate::{
-            Deserialize, ReadError, Serialize, containers, containers::CheckUniqueKeys,
-            deserialize, len::BincodeLen, proptest_config::proptest_cfg, serialize,
+            Deserialize, ReadError, Serialize,
+            containers::{self, CheckUniqueKeys},
+            deserialize,
+            len::BincodeLen,
+            proptest_config::proptest_cfg,
+            serialize,
         },
         indexmap::{IndexMap, IndexSet},
         proptest::prelude::*,

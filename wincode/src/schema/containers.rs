@@ -996,6 +996,7 @@ macro_rules! set_container {
     };
 }
 
+#[cfg(feature = "indexmap")]
 pub(crate) use set_container;
 
 map_container! {
@@ -1438,8 +1439,8 @@ where
 mod tests {
     use {
         crate::{
-            Deserialize, ReadError, Serialize, containers,
-            containers::CheckUniqueKeys,
+            Deserialize, ReadError, Serialize,
+            containers::{self, CheckUniqueKeys},
             deserialize,
             len::{BincodeLen, UseIntLen},
             serialize,
