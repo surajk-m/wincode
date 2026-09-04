@@ -7,14 +7,14 @@ use {
 };
 
 map_container! {
-    /// Like [`HashMap`](crate::containers::HashMap), for [`IndexMap`](indexmap::IndexMap).
+    #[cfg_attr(feature = "std", doc = "Like [`HashMap`](crate::containers::HashMap), for [`IndexMap`](indexmap::IndexMap).")]
     IndexMap => ExtIndexMap<K: Hash | Eq, V, S: BuildHasher | Default = RandomState>,
     ExtIndexMap::with_capacity_and_hasher,
     cap_unique_keys
 }
 
 set_container! {
-    /// Like [`HashSet`](crate::containers::HashSet), for [`IndexSet`](indexmap::IndexSet).
+    #[cfg_attr(feature = "std", doc = "Like [`HashSet`](crate::containers::HashSet), for [`IndexSet`](indexmap::IndexSet).")]
     IndexSet => ExtIndexSet<K: Hash | Eq, S: BuildHasher | Default = RandomState>,
     ExtIndexSet::with_capacity_and_hasher,
     cap_unique_keys
