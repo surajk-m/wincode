@@ -722,10 +722,8 @@ macro_rules! map_container {
             $state = $state_default,
         >(core::marker::PhantomData<($($generic,)* Len, Dup, $state)>);
         $(#[doc = $doc])*
-        // No default hasher without `std`, so `$state` must be named, keep `Dup` last to
-        // match the other containers.
         #[cfg(all($($cfg,)? not(feature = "std")))]
-        pub struct $name<$($generic,)* Len, $state, Dup = $crate::containers::AllowDuplicateKeys>(
+        pub struct $name<$($generic,)* Len, Dup, $state>(
             core::marker::PhantomData<($($generic,)* Len, Dup, $state)>,
         );
     };
