@@ -551,7 +551,7 @@ where
 ///
 /// Default is [`AllowDuplicateKeys`]. See `HashMap` for an example.
 pub trait DuplicateKeyPolicy: sealed::Sealed {
-    /// Fail the read if the entry just decoded collided with an earlier one.
+    /// Apply the policy to a detected key collision.
     fn check(collided: bool) -> ReadResult<()>;
 }
 
